@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Updated color scale for better visual appeal (YlOrRd from ColorBrewer)
     function getColor(s4c) {
-        if (s4c <= 0.10) return '#ffffcc'; // Low
+        if (s4c <= 0.10) return '#ffec1c'; // Low
         if (s4c <= 0.18) return '#fd8d3c'; // Medium
         if (s4c <= 0.26) return '#f03b20'; // High
         return '#bd0026'; // Very High
@@ -34,74 +34,165 @@ document.addEventListener('DOMContentLoaded', () => {
                 complete: function(results) {
                     const data = results.data.filter(row => row.Lat && row.Lon && row.S4C && row.Time);
 
-                    // Group data by unique time values and sort chronologically
-                    const timeGroups = {};
+                    // Group data by satellite and sort by time for each satellite
+                    const satelliteGroups = {};
                     data.forEach(row => {
-                        if (!timeGroups[row.Time]) {
-                            timeGroups[row.Time] = [];
+                        if (!satelliteGroups[row.Satellite]) {
+                            satelliteGroups[row.Satellite] = [];
                         }
-                        timeGroups[row.Time].push(row);
+                        satelliteGroups[row.Satellite].push(row);
                     });
-                    const sortedTimes = Object.keys(timeGroups).sort();
 
-                    // Create layer groups: one for full trajectory and one for highlighted current points
+                    // Sort each satellite's data by time
+                    Object.keys(satelliteGroups).forEach(satellite => {
+                        satelliteGroups[satellite].sort((a, b) => new Date(a.Time) - new Date(b.Time));
+                    });
+
+                    // Create layers for different visualization elements
                     const trajectoryLayer = L.layerGroup().addTo(map);
-                    const highlightLayer = L.layerGroup().addTo(map);
+                    const currentPointLayer = L.layerGroup().addTo(map);
+                    const pathLayer = L.layerGroup().addTo(map);
 
-                    let idx = 0;
+                    // Create full trajectory lines for each satellite (static background)
+                    Object.keys(satelliteGroups).forEach(satellite => {
+                        const satelliteData = satelliteGroups[satellite];
+                        const coordinates = satelliteData.map(row => [row.Lat, row.Lon]);
+                        
+                        // Create a semi-transparent red polyline for the full trajectory
+                        const fullTrajectory = L.polyline(coordinates, {
+                            color: '#dc2626',
+                            weight: 2,
+                            opacity: 0.3,
+                            smoothFactor: 1
+                        }).addTo(trajectoryLayer);
+
+                        // Add popup for full trajectory
+                        const popupContent = `
+                            <div style="font-family: 'Poppins', sans-serif; font-size: 14px;">
+                                <b>Satellite:</b> ${satellite}<br>
+                                <b>Data Points:</b> ${satelliteData.length}<br>
+                                <b>Time Range:</b> ${satelliteData[0].Time} to ${satelliteData[satelliteData.length-1].Time}<br>
+                                <b>S4C Range:</b> ${Math.min(...satelliteData.map(d => d.S4C)).toFixed(3)} - ${Math.max(...satelliteData.map(d => d.S4C)).toFixed(3)}
+                            </div>
+                        `;
+                        fullTrajectory.bindPopup(popupContent);
+                    });
+
+                    // Get all unique time points and sort them
+                    const allTimes = [...new Set(data.map(row => row.Time))].sort();
+                    let currentTimeIndex = 0;
                     const totalDuration = 15000; // 15 seconds
-                    const frameInterval = totalDuration / sortedTimes.length; // ms per frame
+                    const frameInterval = totalDuration / allTimes.length;
 
-                    // Keep track of which time frames have been drawn into the trajectory layer
-                    const drawnTimes = new Set();
+                    // Animation function
+                    function animateTrajectory() {
+                        // Clear previous frame
+                        currentPointLayer.clearLayers();
+                        pathLayer.clearLayers();
 
-                    function renderFrame() {
-                        // Clear previous highlights but keep trajectory history
-                        highlightLayer.clearLayers();
-                        const currentTime = sortedTimes[idx];
-                        const rows = timeGroups[currentTime];
-                        rows.forEach(row => {
-                            // Add to trajectory layer once (smaller point)
-                            if (!drawnTimes.has(currentTime)) {
-                                L.circleMarker([row.Lat, row.Lon], {
-                                    radius: 10,
-                                    fillColor: getColor(row.S4C),
-                                    color: '#666',
-                                    weight: 0.5,
-                                    opacity: 0.7,
-                                    fillOpacity: 0.7
-                                }).addTo(trajectoryLayer);
+                        const currentTime = allTimes[currentTimeIndex];
+                        
+                        // Update datetime display in top right
+                        const timeDisplay = document.getElementById('current-time');
+                        if (timeDisplay) {
+                            const formattedTime = new Date(currentTime).toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            });
+                            timeDisplay.textContent = formattedTime;
+                        }
+                        
+                        // For each satellite, show trajectory up to current time
+                        Object.keys(satelliteGroups).forEach(satellite => {
+                            const satelliteData = satelliteGroups[satellite];
+                            
+                            // Get data points up to current time
+                            const currentData = satelliteData.filter(row => 
+                                new Date(row.Time) <= new Date(currentTime)
+                            );
+
+                            if (currentData.length > 0) {
+                                // Create animated trajectory path (bright red)
+                                if (currentData.length > 1) {
+                                    const currentCoordinates = currentData.map(row => [row.Lat, row.Lon]);
+                                    L.polyline(currentCoordinates, {
+                                        color: '#dc2626',
+                                        weight: 4,
+                                        opacity: 0.9,
+                                        smoothFactor: 1
+                                    }).addTo(pathLayer);
+                                }
+
+                                // Show current position with circle icon
+                                const currentPoint = currentData[currentData.length - 1];
+                                
+                                // Add circle marker for current position
+                                const currentMarker = L.circleMarker([currentPoint.Lat, currentPoint.Lon], {
+                                    radius: 12, // Bigger circle
+                                    fillColor: getColor(currentPoint.S4C),
+                                    color: '#ffffff',
+                                    weight: 3,
+                                    opacity: 1,
+                                    fillOpacity: 0.9
+                                }).addTo(currentPointLayer);
+
+                                // Create a custom div icon for the moving label positioned away from the circle
+                                const labelIcon = L.divIcon({
+                                    className: 'moving-label',
+                                    html: `
+                                        <div style="
+                                            background: rgba(255, 255, 255, 0.95);
+                                            padding: 8px 12px;
+                                            border-radius: 8px;
+                                            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                                            border: 2px solid ${getColor(currentPoint.S4C)};
+                                            font-family: 'Poppins', sans-serif;
+                                            font-size: 12px;
+                                            font-weight: 600;
+                                            color: #333;
+                                            white-space: nowrap;
+                                            transform: translate(-50%, -150%);
+                                            margin-top: -20px;
+                                        ">
+                                            ${currentPoint.Satellite}<br>
+                                            <span style="color: #333;">S4C: ${currentPoint.S4C.toFixed(4)}</span>
+                                        </div>
+                                    `,
+                                    iconSize: [0, 0],
+                                    iconAnchor: [0, 0]
+                                });
+
+                                // Add the moving label marker positioned away from the circle
+                                const labelMarker = L.marker([currentPoint.Lat, currentPoint.Lon], {
+                                    icon: labelIcon
+                                }).addTo(currentPointLayer);
+
+                                // Add detailed popup to both the circle marker and label
+                                const pointPopup = `
+                                    <div style="font-family: 'Poppins', sans-serif; font-size: 14px;">
+                                        <b>Satellite:</b> ${currentPoint.Satellite}<br>
+                                        <b>Time:</b> ${currentPoint.Time}<br>
+                                        <b>S4C Index:</b> <span style="color: ${getColor(currentPoint.S4C)}; font-weight: bold;">${currentPoint.S4C.toFixed(4)}</span><br>
+                                        <b>Position:</b> ${currentPoint.Lat.toFixed(4)}, ${currentPoint.Lon.toFixed(4)}
+                                    </div>
+                                `;
+                                currentMarker.bindPopup(pointPopup);
+                                labelMarker.bindPopup(pointPopup);
                             }
-
-                            // Highlight current points with bigger radius
-                            const circleMarker = L.circleMarker([row.Lat, row.Lon], {
-                                radius: 10, // Bigger icon point for current frame
-                                fillColor: getColor(row.S4C),
-                                color: '#333',
-                                weight: 1,
-                                opacity: 1,
-                                fillOpacity: 0.9
-                            }).addTo(highlightLayer);
-
-                            const popupContent = `
-                                <div style="font-family: 'Poppins', sans-serif; font-size: 14px;">
-                                    <b>Satellite:</b> ${row.Satellite}<br>
-                                    <b>Time:</b> ${row.Time}<br>
-                                    <b>S4C Index:</b> <span style="color: black; font-weight: bold;">${row.S4C}</span>
-                                </div>
-                            `;
-                            circleMarker.bindPopup(popupContent);
                         });
 
-                        // Mark this time frame as drawn to avoid duplicate small markers
-                        drawnTimes.add(currentTime);
-
-                        idx = (idx + 1) % sortedTimes.length; // loop
+                        // Move to next time frame
+                        currentTimeIndex = (currentTimeIndex + 1) % allTimes.length;
                     }
 
-                    // Initial render
-                    renderFrame();
-                    setInterval(renderFrame, frameInterval);
+                    // Start animation
+                    animateTrajectory();
+                    setInterval(animateTrajectory, frameInterval);
                 }
             });
         });
