@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S4C Scintillation Map</title>
+    <title>S₄C Map</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,7 +62,7 @@
     <div id="map"></div>
 
     <div class="title-container">
-        <h1 class="text-2xl font-bold text-gray-800">S4C Index Data</h1>
+        <h1 class="text-2xl font-bold text-gray-800">S<sub>4C</sub> Map</h1>
     </div>
 
     <div id="datetime-display" class="datetime-container">
@@ -83,11 +83,10 @@
         </ul>
         <div class="mt-3 text-sm text-gray-600">
             <p><strong>S4C Index Colors:</strong></p>
-            <div class="grid grid-cols-2 gap-1 mt-1">
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-1" style="background-color: #ffffcc;"></span>Low (&lt;0.10)</span>
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-1" style="background-color: #fd8d3c;"></span>Medium</span>
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-1" style="background-color: #f03b20;"></span>High</span>
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-1" style="background-color: #bd0026;"></span>Very High</span>
+            <div class="grid grid-cols-1 gap-1 mt-1">
+                <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-1" style="background-color: #22c55e;"></span>Green (S4C ≤ 0.25)</span>
+                <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-1" style="background-color: #fbbf24;"></span>Yellow (0.25 < S4C ≤ 0.4)</span>
+                <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-1" style="background-color: #ef4444;"></span>Red (S4C > 0.4)</span>
             </div>
         </div>
     </div>

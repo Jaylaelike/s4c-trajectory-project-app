@@ -17,12 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
         position: 'bottomright'
     }).addTo(map);
 
-    // Updated color scale for better visual appeal (YlOrRd from ColorBrewer)
+    // Updated color scale based on 3-level S4C classification
     function getColor(s4c) {
-        if (s4c <= 0.10) return '#ffec1c'; // Low
-        if (s4c <= 0.18) return '#fd8d3c'; // Medium
-        if (s4c <= 0.26) return '#f03b20'; // High
-        return '#bd0026'; // Very High
+        if (s4c <= 0.25) return '#22c55e'; // Green (S4C ≤ 0.25)
+        if (s4c <= 0.4) return '#fbbf24'; // Yellow (0.25 < S4C ≤ 0.4)
+        return '#ef4444'; // Red (S4C > 0.4)
     }
 
     fetch('data.csv')
@@ -104,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 second: '2-digit',
                                 hour12: false
                             });
-                            timeDisplay.textContent = formattedTime;
+                            timeDisplay.textContent = formattedTime + ' (UTC)';
                         }
                         
                         // For each satellite, show trajectory up to current time
