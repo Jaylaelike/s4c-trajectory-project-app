@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const map = L.map('map', {
         center: [14.6603124, 101.017269],
-        zoom: 8,
+        zoom: 6,
         zoomControl: false // We can add a custom one if we want
     });
 
@@ -22,6 +22,106 @@ document.addEventListener('DOMContentLoaded', () => {
         if (s4c <= 0.25) return '#22c55e'; // Green (S4C ≤ 0.25)
         if (s4c <= 0.4) return '#fbbf24'; // Yellow (0.25 < S4C ≤ 0.4)
         return '#ef4444'; // Red (S4C > 0.4)
+    }
+
+    // Longdo Maps API integration
+    const LONGDO_API_KEY = 'bb63c1e194eee172959526ee16502669';
+
+    async function reverseGeocodeWithLongdo(lat, lon) {
+        try {
+            const url = "https://api.longdo.com/map/services/address";
+            const params = new URLSearchParams({
+                lat: lat.toString(),
+                lon: lon.toString(),
+                key: LONGDO_API_KEY
+            });
+
+            const response = await fetch(`${url}?${params}`, {
+                method: 'GET',
+                timeout: 15000
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.aoi) {
+                    return data.aoi;
+                }
+            }
+            return 'Location not found';
+        } catch (error) {
+            console.error('Longdo API error:', error);
+            return 'Error retrieving location';
+        }
+    }
+
+    function updateLocationCardList(moderateS4CList) {
+        const card = document.getElementById('location-card');
+        const listContainer = document.getElementById('location-list');
+
+        if (!card || !listContainer) return;
+
+        // Always show the card
+        card.style.display = 'block';
+        
+        // Clear existing list
+        listContainer.innerHTML = '';
+
+        if (moderateS4CList.length === 0) {
+            // Show no alerts message when no moderate S4C satellites
+            listContainer.innerHTML = '<div class="text-sm text-gray-500 italic">No moderate S4C alerts currently detected...</div>';
+            return;
+        }
+
+        // Add each moderate S4C satellite to the list
+        moderateS4CList.forEach((item, index) => {
+            const listItem = document.createElement('div');
+            listItem.className = 'mb-3 p-2 border border-yellow-200 rounded-lg bg-yellow-50';
+            listItem.innerHTML = `
+                <div class="mb-1">
+                    <strong>Satellite:</strong> ${item.satellite}
+                    <span class="inline-block w-3 h-3 rounded-full ml-2" style="background-color: #fbbf24;"></span>
+                </div>
+                <div class="mb-1">
+                    <strong>S<sub>4C</sub> Value:</strong> ${item.s4c.toFixed(4)}
+                </div>
+                <div class="mb-1">
+                    <strong>Coordinates:</strong><br>
+                    <span class="text-xs">${item.lat.toFixed(4)}, ${item.lon.toFixed(4)}</span>
+                </div>
+                <div class="mb-1">
+                    <strong>Location:</strong><br>
+                    <span id="location-${index}" class="text-xs">Searching...</span>
+                </div>
+            `;
+            listContainer.appendChild(listItem);
+
+            // Get location name from API with delay
+            setTimeout(() => {
+                reverseGeocodeWithLongdo(item.lat, item.lon).then(location => {
+                    const locationEl = document.getElementById(`location-${index}`);
+                    if (locationEl) {
+                        locationEl.textContent = location;
+                    }
+                });
+            }, index * 500); // 500ms delay between each API call
+        });
+    }
+
+    // Initialize the location card to show on page load
+    function initializeLocationCard() {
+        updateLocationCardList([]);
+    }
+
+    // Initialize legend close functionality
+    function initializeLegendControls() {
+        const closeBtn = document.getElementById('close-legend-btn');
+        const legend = document.getElementById('legend');
+        
+        if (closeBtn && legend) {
+            closeBtn.addEventListener('click', () => {
+                legend.style.display = 'none';
+            });
+        }
     }
 
     fetch('data.csv')
@@ -80,8 +180,111 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Get all unique time points and sort them
                     const allTimes = [...new Set(data.map(row => row.Time))].sort();
                     let currentTimeIndex = 0;
+                    let isPlaying = true;
+                    let animationInterval;
                     const totalDuration = 15000; // 15 seconds
                     const frameInterval = totalDuration / allTimes.length;
+
+                    // Initialize time control UI
+                    function initializeTimeControl() {
+                        const slider = document.getElementById('time-slider');
+                        const playPauseBtn = document.getElementById('play-pause-btn');
+                        const resetBtn = document.getElementById('reset-btn');
+                        const startTimeEl = document.getElementById('start-time');
+                        const endTimeEl = document.getElementById('end-time');
+                        const progressEl = document.getElementById('current-progress');
+
+                        if (slider) {
+                            slider.max = allTimes.length - 1;
+                            slider.value = 0;
+                        }
+
+                        if (startTimeEl && allTimes.length > 0) {
+                            const startTime = new Date(allTimes[0]).toLocaleString('en-US', {
+                                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                            });
+                            startTimeEl.textContent = startTime;
+                        }
+
+                        if (endTimeEl && allTimes.length > 0) {
+                            const endTime = new Date(allTimes[allTimes.length - 1]).toLocaleString('en-US', {
+                                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                            });
+                            endTimeEl.textContent = endTime;
+                        }
+
+                        // Slider event listener
+                        if (slider) {
+                            slider.addEventListener('input', (e) => {
+                                currentTimeIndex = parseInt(e.target.value);
+                                animateTrajectory();
+                                updateProgress();
+                            });
+                        }
+
+                        // Play/Pause button
+                        if (playPauseBtn) {
+                            playPauseBtn.addEventListener('click', () => {
+                                togglePlayPause();
+                            });
+                        }
+
+                        // Reset button
+                        if (resetBtn) {
+                            resetBtn.addEventListener('click', () => {
+                                resetAnimation();
+                            });
+                        }
+                    }
+
+                    function updateProgress() {
+                        const slider = document.getElementById('time-slider');
+                        const progressEl = document.getElementById('current-progress');
+                        
+                        if (slider) {
+                            slider.value = currentTimeIndex;
+                        }
+                        
+                        if (progressEl) {
+                            const progress = Math.round((currentTimeIndex / (allTimes.length - 1)) * 100);
+                            progressEl.textContent = `${progress}%`;
+                        }
+                    }
+
+                    function togglePlayPause() {
+                        const playPauseBtn = document.getElementById('play-pause-btn');
+                        isPlaying = !isPlaying;
+                        
+                        if (isPlaying) {
+                            playPauseBtn.textContent = 'Pause';
+                            startAnimation();
+                        } else {
+                            playPauseBtn.textContent = 'Play';
+                            if (animationInterval) {
+                                clearInterval(animationInterval);
+                            }
+                        }
+                    }
+
+                    function resetAnimation() {
+                        currentTimeIndex = 0;
+                        animateTrajectory();
+                        updateProgress();
+                    }
+
+                    function startAnimation() {
+                        if (animationInterval) {
+                            clearInterval(animationInterval);
+                        }
+                        
+                        animationInterval = setInterval(() => {
+                            if (isPlaying) {
+                                currentTimeIndex = (currentTimeIndex + 1) % allTimes.length;
+                                animateTrajectory();
+                                updateProgress();
+                            }
+                        }, frameInterval);
+                    }
 
                     // Animation function
                     function animateTrajectory() {
@@ -185,13 +388,44 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
 
-                        // Move to next time frame
-                        currentTimeIndex = (currentTimeIndex + 1) % allTimes.length;
+                        // Collect only satellites in moderate S4C range (0.25 < S4C ≤ 0.4) for location card
+                        const moderateS4CList = [];
+                        Object.keys(satelliteGroups).forEach(satellite => {
+                            const satelliteData = satelliteGroups[satellite];
+                            const currentData = satelliteData.filter(row => 
+                                new Date(row.Time) <= new Date(currentTime)
+                            );
+                            
+                            if (currentData.length > 0) {
+                                const currentPoint = currentData[currentData.length - 1];
+                                // Only include satellites in moderate S4C range
+                                if (currentPoint.S4C > 0.25 && currentPoint.S4C <= 0.4) {
+                                    moderateS4CList.push({
+                                        satellite: currentPoint.Satellite,
+                                        s4c: currentPoint.S4C,
+                                        lat: currentPoint.Lat,
+                                        lon: currentPoint.Lon
+                                    });
+                                }
+                            }
+                        });
+
+                        // Update location card with only moderate S4C satellites
+                        updateLocationCardList(moderateS4CList);
                     }
+
+                    // Initialize location card to show on page load
+                    initializeLocationCard();
+
+                    // Initialize time control
+                    initializeTimeControl();
+
+                    // Initialize legend controls
+                    initializeLegendControls();
 
                     // Start animation
                     animateTrajectory();
-                    setInterval(animateTrajectory, frameInterval);
+                    startAnimation();
                 }
             });
         });
