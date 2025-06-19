@@ -330,51 +330,42 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }).addTo(pathLayer);
                                 }
 
-                                // Show current position with circle icon
+                                // Show current position with circle icon containing satellite name
                                 const currentPoint = currentData[currentData.length - 1];
                                 
-                                // Add circle marker for current position
-                                const currentMarker = L.circleMarker([currentPoint.Lat, currentPoint.Lon], {
-                                    radius: 12, // Bigger circle
-                                    fillColor: getColor(currentPoint.S4C),
-                                    color: '#ffffff',
-                                    weight: 3,
-                                    opacity: 1,
-                                    fillOpacity: 0.9
-                                }).addTo(currentPointLayer);
-
-                                // Create a custom div icon for the moving label positioned away from the circle
-                                const labelIcon = L.divIcon({
-                                    className: 'moving-label',
+                                // Create a custom div icon for the circle with satellite name
+                                const circleIcon = L.divIcon({
+                                    className: 'satellite-circle',
                                     html: `
                                         <div style="
-                                            background: rgba(255, 255, 255, 0.95);
-                                            padding: 8px 12px;
-                                            border-radius: 8px;
-                                            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                                            border: 2px solid ${getColor(currentPoint.S4C)};
+                                            width: 40px;
+                                            height: 40px;
+                                            border-radius: 50%;
+                                            background-color: ${getColor(currentPoint.S4C)};
+                                            border: 4px solid #ffffff;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
                                             font-family: 'Poppins', sans-serif;
                                             font-size: 12px;
-                                            font-weight: 600;
-                                            color: #333;
-                                            white-space: nowrap;
-                                            transform: translate(-50%, -150%);
-                                            margin-top: -20px;
+                                            font-weight: bold;
+                                            color: white;
+                                            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+                                            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
                                         ">
-                                            ${currentPoint.Satellite}<br>
-                                            <span style="color: #333;">S4C: ${currentPoint.S4C.toFixed(4)}</span>
+                                            ${currentPoint.Satellite}
                                         </div>
                                     `,
-                                    iconSize: [0, 0],
-                                    iconAnchor: [0, 0]
+                                    iconSize: [48, 48],
+                                    iconAnchor: [24, 24]
                                 });
 
-                                // Add the moving label marker positioned away from the circle
-                                const labelMarker = L.marker([currentPoint.Lat, currentPoint.Lon], {
-                                    icon: labelIcon
+                                // Add the circle marker with satellite name
+                                const currentMarker = L.marker([currentPoint.Lat, currentPoint.Lon], {
+                                    icon: circleIcon
                                 }).addTo(currentPointLayer);
 
-                                // Add detailed popup to both the circle marker and label
+                                // Add detailed popup to the circle marker
                                 const pointPopup = `
                                     <div style="font-family: 'Poppins', sans-serif; font-size: 14px;">
                                         <b>Satellite:</b> ${currentPoint.Satellite}<br>
@@ -384,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 `;
                                 currentMarker.bindPopup(pointPopup);
-                                labelMarker.bindPopup(pointPopup);
                             }
                         });
 
