@@ -24,6 +24,85 @@ document.addEventListener('DOMContentLoaded', () => {
         return '#ef4444'; // Red (S4C > 0.4)
     }
 
+    // S4C level classification function
+    function getS4CLevel(s4c) {
+        if (s4c <= 0.25) return 'good';
+        if (s4c <= 0.4) return 'medium';
+        return 'bad';
+    }
+
+    // Filter state
+    let s4cFilter = {
+        good: true,
+        medium: true,
+        bad: true
+    };
+
+    // Initialize filter controls
+    function initializeFilterControls() {
+        const filterGood = document.getElementById('filter-good');
+        const filterMedium = document.getElementById('filter-medium');
+        const filterBad = document.getElementById('filter-bad');
+
+        if (filterGood) {
+            filterGood.addEventListener('change', (e) => {
+                s4cFilter.good = e.target.checked;
+                animateTrajectory();
+            });
+        }
+
+        if (filterMedium) {
+            filterMedium.addEventListener('change', (e) => {
+                s4cFilter.medium = e.target.checked;
+                animateTrajectory();
+            });
+        }
+
+        if (filterBad) {
+            filterBad.addEventListener('change', (e) => {
+                s4cFilter.bad = e.target.checked;
+                animateTrajectory();
+            });
+        }
+    }
+
+    // Initialize satellite panel controls
+    function initializeSatellitePanelControls() {
+        const closeBtn = document.getElementById('close-satellite-panel-btn');
+        const panel = document.getElementById('satellite-panel');
+        
+        if (closeBtn && panel) {
+            closeBtn.addEventListener('click', () => {
+                panel.style.display = 'none';
+            });
+        }
+    }
+
+    // Update satellite count display
+    function updateSatelliteCount(activeSatellites) {
+        const totalCount = document.getElementById('total-count');
+        const goodCount = document.getElementById('good-count');
+        const mediumCount = document.getElementById('medium-count');
+        const badCount = document.getElementById('bad-count');
+
+        const counts = {
+            total: activeSatellites.length,
+            good: 0,
+            medium: 0,
+            bad: 0
+        };
+
+        activeSatellites.forEach(satellite => {
+            const level = getS4CLevel(satellite.s4c);
+            counts[level]++;
+        });
+
+        if (totalCount) totalCount.textContent = counts.total;
+        if (goodCount) goodCount.textContent = counts.good;
+        if (mediumCount) mediumCount.textContent = counts.medium;
+        if (badCount) badCount.textContent = counts.bad;
+    }
+
     // Longdo Maps API integration
     const LONGDO_API_KEY = 'bb63c1e194eee172959526ee16502669';
 
@@ -309,6 +388,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             timeDisplay.textContent = formattedTime + ' (UTC)';
                         }
                         
+                        // Collect active satellites and count by S4C level
+                        const activeSatellites = [];
+                        const moderateS4CList = [];
+                        
                         // For each satellite, show trajectory up to current time
                         Object.keys(satelliteGroups).forEach(satellite => {
                             const satelliteData = satelliteGroups[satellite];
@@ -319,6 +402,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             );
 
                             if (currentData.length > 0) {
+                                const currentPoint = currentData[currentData.length - 1];
+                                const s4cLevel = getS4CLevel(currentPoint.S4C);
+                                
+                                // Add to active satellites list for counting
+                                activeSatellites.push({
+                                    satellite: currentPoint.Satellite,
+                                    s4c: currentPoint.S4C,
+                                    level: s4cLevel
+                                });
+
+                                // Check if this satellite should be displayed based on filter
+                                if (!s4cFilter[s4cLevel]) {
+                                    return; // Skip this satellite if filtered out
+                                }
+
                                 // Create animated trajectory path (bright red)
                                 if (currentData.length > 1) {
                                     const currentCoordinates = currentData.map(row => [row.Lat, row.Lon]);
@@ -330,9 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }).addTo(pathLayer);
                                 }
 
-                                // Show current position with circle icon containing satellite name
-                                const currentPoint = currentData[currentData.length - 1];
-                                
                                 // Create a custom div icon for the circle with satellite name
                                 const circleIcon = L.divIcon({
                                     className: 'satellite-circle',
@@ -375,20 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 `;
                                 currentMarker.bindPopup(pointPopup);
-                            }
-                        });
 
-                        // Collect only satellites in moderate S4C range (0.25 < S4C ≤ 0.4) for location card
-                        const moderateS4CList = [];
-                        Object.keys(satelliteGroups).forEach(satellite => {
-                            const satelliteData = satelliteGroups[satellite];
-                            const currentData = satelliteData.filter(row => 
-                                new Date(row.Time) <= new Date(currentTime)
-                            );
-                            
-                            if (currentData.length > 0) {
-                                const currentPoint = currentData[currentData.length - 1];
-                                // Only include satellites in moderate S4C range
+                                // Collect moderate S4C satellites for location card
                                 if (currentPoint.S4C > 0.25 && currentPoint.S4C <= 0.4) {
                                     moderateS4CList.push({
                                         satellite: currentPoint.Satellite,
@@ -399,6 +482,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                         });
+
+                        // Update satellite count display
+                        updateSatelliteCount(activeSatellites);
 
                         // Update location card with only moderate S4C satellites
                         updateLocationCardList(moderateS4CList);
@@ -412,6 +498,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Initialize legend controls
                     initializeLegendControls();
+
+                    // Initialize filter controls
+                    initializeFilterControls();
+
+                    // Initialize satellite panel controls
+                    initializeSatellitePanelControls();
 
                     // Start animation
                     animateTrajectory();
