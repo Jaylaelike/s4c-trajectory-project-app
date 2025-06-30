@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Updated color scale based on 3-level S4C classification
   function getColor(s4c) {
-    if (s4c <= 0.25) return "#22c55e" // Green (S4C ≤ 0.25)
+    if (s4c <= 0.25) return "#3b82f6" // Blue (S4C ≤ 0.25)
     if (s4c <= 0.4) return "#fbbf24" // Yellow (0.25 < S4C ≤ 0.4)
     return "#ef4444" // Red (S4C > 0.4)
   }
