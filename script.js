@@ -4,7 +4,7 @@ const Papa = window.Papa
 
 document.addEventListener("DOMContentLoaded", () => {
   const map = L.map("map", {
-    center: [14.6603124, 101.017269],
+    center: [10.462813, 99.093706], // 14.6603124, 101.017269
     zoom: 5,
     zoomControl: false, // We can add a custom one if we want
   })
