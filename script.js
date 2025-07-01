@@ -317,13 +317,25 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (startTimeEl && allTimes.length > 0) {
-              startTimeEl.textContent = new Date(allTimes[0]).toLocaleTimeString("en-US", { hour12: false })
+              const date = new Date(allTimes[0])
+              const day = date.getDate().toString().padStart(2, '0')
+              const month = (date.getMonth() + 1).toString().padStart(2, '0')
+              const year = date.getFullYear()
+              const hours = date.getHours().toString().padStart(2, '0')
+              const minutes = date.getMinutes().toString().padStart(2, '0')
+              const seconds = date.getSeconds().toString().padStart(2, '0')
+              startTimeEl.textContent = `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`
             }
 
             if (endTimeEl && allTimes.length > 0) {
-              endTimeEl.textContent = new Date(allTimes[allTimes.length - 1]).toLocaleTimeString("en-US", {
-                hour12: false,
-              })
+              const date = new Date(allTimes[allTimes.length - 1])
+              const day = date.getDate().toString().padStart(2, '0')
+              const month = (date.getMonth() + 1).toString().padStart(2, '0')
+              const year = date.getFullYear()
+              const hours = date.getHours().toString().padStart(2, '0')
+              const minutes = date.getMinutes().toString().padStart(2, '0')
+              const seconds = date.getSeconds().toString().padStart(2, '0')
+              endTimeEl.textContent = `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`
             }
 
             if (playPauseBtn) {
@@ -387,15 +399,15 @@ document.addEventListener("DOMContentLoaded", () => {
             // Update time display
             const timeDisplay = document.getElementById("current-time")
             if (timeDisplay) {
-              const formattedTime = new Date(currentTime).toLocaleString("en-US", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false,
-              })
+              const date = new Date(currentTime)
+              const day = date.getDate().toString().padStart(2, '0')
+              const month = (date.getMonth() + 1).toString().padStart(2, '0')
+              const year = date.getFullYear()
+              const hours = date.getHours().toString().padStart(2, '0')
+              const minutes = date.getMinutes().toString().padStart(2, '0')
+              const seconds = date.getSeconds().toString().padStart(2, '0')
+              
+              const formattedTime = `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`
               timeDisplay.textContent = formattedTime + " UTC"
             }
 
