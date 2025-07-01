@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const hours = date.getHours().toString().padStart(2, '0')
               const minutes = date.getMinutes().toString().padStart(2, '0')
               const seconds = date.getSeconds().toString().padStart(2, '0')
-              startTimeEl.textContent = `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`
+              startTimeEl.textContent = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
             }
 
             if (endTimeEl && allTimes.length > 0) {
@@ -335,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const hours = date.getHours().toString().padStart(2, '0')
               const minutes = date.getMinutes().toString().padStart(2, '0')
               const seconds = date.getSeconds().toString().padStart(2, '0')
-              endTimeEl.textContent = `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`
+              endTimeEl.textContent = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
             }
 
             if (playPauseBtn) {
@@ -407,7 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const minutes = date.getMinutes().toString().padStart(2, '0')
               const seconds = date.getSeconds().toString().padStart(2, '0')
               
-              const formattedTime = `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`
+              const formattedTime = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
               timeDisplay.textContent = formattedTime + " UTC"
             }
 
