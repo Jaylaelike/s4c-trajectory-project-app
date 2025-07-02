@@ -17,20 +17,22 @@ document.addEventListener("DOMContentLoaded", () => {
     maxZoom: 19,
   }).addTo(map)
 
-  // Add scale control to show map scale
+  // Add zoom control at the top right
   L.control
-    .scale({
-      position: "bottomright",
-      metric: true,
-      imperial: false,
-      maxWidth: 200,
+    .zoom({
+      position: "topright",
+      zoomInTitle: "Zoom in",
+      zoomOutTitle: "Zoom out"
     })
     .addTo(map)
 
-  // Add a zoom control to a different position
+  // Add scale control to show map scale at the top right
   L.control
-    .zoom({
-      position: "bottomright",
+    .scale({
+      position: "topright",
+      metric: true,
+      imperial: false,
+      maxWidth: 200,
     })
     .addTo(map)
 
